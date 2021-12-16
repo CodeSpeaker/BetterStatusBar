@@ -7,12 +7,7 @@
     <depends>com.intellij.modules.platform</depends>
 
     <extensions defaultExtensionNs="com.intellij">
-        <applicationService serviceImplementation="com.github.codespeaker.betterstatusbar.services.MyApplicationService"/>
-        <projectService serviceImplementation="com.github.codespeaker.betterstatusbar.services.MyProjectService"/>
+        <statusBarWidgetFactory id="dateWidget" implementation="betterstatusbar.status.DateWidgetFactory" order="after lineSeparatorWidget"/>
     </extensions>
 
-    <applicationListeners>
-        <listener class="com.github.codespeaker.betterstatusbar.listeners.MyProjectManagerListener"
-                  topic="com.intellij.openapi.project.ProjectManagerListener"/>
-    </applicationListeners>
 </idea-plugin>
