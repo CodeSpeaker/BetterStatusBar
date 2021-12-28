@@ -1,50 +1,42 @@
 package betterstatusbar.status;
 
-import com.intellij.openapi.ui.popup.JBPopup;
-import com.intellij.openapi.ui.popup.JBPopupFactory;
-import com.intellij.openapi.util.Disposer;
 import com.intellij.openapi.wm.CustomStatusBarWidget;
 import com.intellij.openapi.wm.StatusBar;
 import com.intellij.openapi.wm.impl.status.IdeStatusBarImpl;
 import com.intellij.openapi.wm.impl.status.TextPanel;
 import com.intellij.ui.ClickListener;
-import com.intellij.ui.awt.RelativePoint;
 import com.intellij.util.concurrency.EdtExecutorService;
+import org.apache.groovy.util.Maps;
 import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.MouseEvent;
+import java.awt.font.TextAttribute;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
-public class DatePanel extends TextPanel implements CustomStatusBarWidget {
+public class DateTimePanel extends TextPanel implements CustomStatusBarWidget {
     private ScheduledFuture<?> myFuture;
     private final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private JLabel label = new JLabel();
+    private boolean showLabel = false;
 
-    public DatePanel() {
+    public DateTimePanel(boolean showLabel, ClickListener clickListener) {
         myFuture = EdtExecutorService.getScheduledExecutorInstance().scheduleWithFixedDelay(this::setText, 0, 1, TimeUnit.SECONDS);
-        setToolTipText("show calendar");
 
-        new ClickListener() {
-            @Override
-            public boolean onClick(@NotNull MouseEvent event, int clickCount) {
-                showPopup(event);
-                return true;
-            }
-        }.installOn(this, true);
-    }
+        if (showLabel) {
+            this.showLabel = true;
+            label.setMinimumSize(new Dimension(500, 70));
+            label.setFont(Font.getFont(Maps.of(TextAttribute.SIZE, 20)));
+            label.setHorizontalAlignment(JLabel.CENTER);
+            add(label);
+        }
 
-    private void showPopup(MouseEvent event) {
-        JBPopup popup = JBPopupFactory.getInstance().createComponentPopupBuilder(new CalendarGridPanel(this), null)
-                .setTitle("Calendar")
-                .createPopup();
-        Dimension dimension = new Dimension(100, 100);
-        Point at = new Point(0, -dimension.height);
-        popup.show(new RelativePoint(event.getComponent(), at));
-        Disposer.register(this, popup);
+        if (clickListener != null) {
+            clickListener.installOn(this, true);
+        }
     }
 
     @Override
@@ -74,7 +66,25 @@ public class DatePanel extends TextPanel implements CustomStatusBarWidget {
     }
 
     private void setText() {
-        setText(LocalDateTime.now().format(FORMATTER));
+        String text = LocalDateTime.now().format(FORMATTER);
+
+        if (showLabel) {
+            label.setText(text);
+        } else {
+            setText(text);
+        }
     }
 
+    @Override
+    public Dimension getPreferredSize() {
+        if (showLabel) {
+            return new Dimension(500, 70);
+        }
+        return super.getPreferredSize();
+    }
+
+    @Override
+    public Dimension getMinimumSize() {
+        return super.getMinimumSize();
+    }
 }
