@@ -1,5 +1,6 @@
 package betterstatusbar.status;
 
+import com.intellij.openapi.Disposable;
 import com.intellij.openapi.ui.popup.JBPopup;
 import com.intellij.openapi.ui.popup.JBPopupFactory;
 import com.intellij.openapi.util.Disposer;
@@ -19,9 +20,7 @@ public class PopupCalendarGrid extends ClickListener {
         Dimension dimension = new Dimension(100, 100);
         Point at = new Point(0, -dimension.height);
         popup.show(new RelativePoint(event.getComponent(), at));
-        DateTimePanel parent = (DateTimePanel) event.getComponent();
-        Disposer.register(parent, popup);
-        parent.setToolTipText("show calendar");
+        Disposer.register((Disposable) event.getComponent(), popup);
         return true;
     }
 }

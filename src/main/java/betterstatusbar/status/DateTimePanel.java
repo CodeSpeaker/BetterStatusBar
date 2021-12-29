@@ -35,6 +35,7 @@ public class DateTimePanel extends TextPanel implements CustomStatusBarWidget {
         }
 
         if (clickListener != null) {
+            setToolTipText("show calendar");
             clickListener.installOn(this, true);
         }
     }
