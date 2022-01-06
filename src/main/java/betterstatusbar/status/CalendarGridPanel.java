@@ -30,7 +30,7 @@ class CalendarGridPanel extends OpaquePanel {
     private final DateTimeFormatter oDateFormatter = DateTimeFormatter.ISO_INSTANT;
     private final ZoneId zoneId = ZoneId.of("Asia/Shanghai");
     private DateNumPanel[] labels = new DateNumPanel[42];
-    private DateTimePanel dateTimePanel = new DateTimePanel(true, null);
+    private DateTimePanel dateTimePanel = new DateTimePanel();
     private String[] weekdays = {"日", "一", "二", "三", "四", "五", "六"};
     private ExecutorService executorService = Executors.newSingleThreadExecutor();
 

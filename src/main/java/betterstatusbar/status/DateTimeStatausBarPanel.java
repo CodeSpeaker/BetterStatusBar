@@ -2,32 +2,30 @@ package betterstatusbar.status;
 
 import com.intellij.openapi.wm.CustomStatusBarWidget;
 import com.intellij.openapi.wm.StatusBar;
+import com.intellij.openapi.wm.impl.status.IdeStatusBarImpl;
 import com.intellij.openapi.wm.impl.status.TextPanel;
-import com.intellij.ui.components.JBLabel;
+import com.intellij.ui.ClickListener;
 import com.intellij.util.concurrency.EdtExecutorService;
-import org.apache.groovy.util.Maps;
 import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.font.TextAttribute;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
-public class DateTimePanel extends TextPanel implements CustomStatusBarWidget {
+public class DateTimeStatausBarPanel extends TextPanel implements CustomStatusBarWidget {
     private ScheduledFuture<?> myFuture;
     private final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-    private JBLabel label = new JBLabel();
 
-    public DateTimePanel() {
-        myFuture = EdtExecutorService.getScheduledExecutorInstance().scheduleWithFixedDelay(this::setText, 0, 17, TimeUnit.MILLISECONDS);
+    public DateTimeStatausBarPanel(ClickListener clickListener) {
+        myFuture = EdtExecutorService.getScheduledExecutorInstance().scheduleWithFixedDelay(this::setText, 0, 1, TimeUnit.SECONDS);
 
-        label.setMinimumSize(new Dimension(190, 70));
-        label.setFont(Font.getFont(Maps.of(TextAttribute.SIZE, 20)));
-        label.setHorizontalAlignment(JBLabel.CENTER);
-        add(label);
+        if (clickListener != null) {
+            setToolTipText("show calendar");
+            clickListener.installOn(this, true);
+        }
     }
 
     @Override
@@ -38,7 +36,9 @@ public class DateTimePanel extends TextPanel implements CustomStatusBarWidget {
 
     @Override
     public void install(@NotNull StatusBar statusBar) {
-
+        if (statusBar instanceof IdeStatusBarImpl) {
+            ((IdeStatusBarImpl)statusBar).setBorder(BorderFactory.createEmptyBorder(1, 0, 0, 6));
+        }
     }
 
     @Override
@@ -56,12 +56,7 @@ public class DateTimePanel extends TextPanel implements CustomStatusBarWidget {
 
     private void setText() {
         String text = LocalDateTime.now().format(FORMATTER);
-        label.setText(String.format("<html><div align='center'>%s</div><div align='center'>%s</div></html>", text, System.currentTimeMillis()));
-    }
-
-    @Override
-    public Dimension getPreferredSize() {
-        return getMinimumSize();
+        setText(text);
     }
 
     @Override

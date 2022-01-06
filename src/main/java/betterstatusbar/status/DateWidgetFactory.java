@@ -28,7 +28,7 @@ public class DateWidgetFactory implements StatusBarWidgetFactory {
     @Override
     @NotNull
     public StatusBarWidget createWidget(@NotNull Project project) {
-        return new DateTimePanel(false, new PopupCalendarGrid());
+        return new DateTimeStatausBarPanel(new PopupCalendarGrid());
     }
 
     @Override
