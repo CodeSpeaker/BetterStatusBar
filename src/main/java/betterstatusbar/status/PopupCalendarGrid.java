@@ -12,15 +12,20 @@ import java.awt.*;
 import java.awt.event.MouseEvent;
 
 public class PopupCalendarGrid extends ClickListener {
+    CalendarGridPanel calendarGridPanel = new CalendarGridPanel();
+
     @Override
     public boolean onClick(@NotNull MouseEvent event, int clickCount) {
-        JBPopup popup = JBPopupFactory.getInstance().createComponentPopupBuilder(new CalendarGridPanel(), null)
+        Disposer.dispose(calendarGridPanel);
+        calendarGridPanel = new CalendarGridPanel();
+
+        JBPopup popup = JBPopupFactory.getInstance().createComponentPopupBuilder(calendarGridPanel, null)
                 .setTitle("Calendar")
                 .createPopup();
         Dimension dimension = new Dimension(100, 100);
         Point at = new Point(0, -dimension.height);
         popup.show(new RelativePoint(event.getComponent(), at));
-        Disposer.register((Disposable) event.getComponent(), popup);
+        Disposer.register((Disposable) event.getComponent(), calendarGridPanel);
         return true;
     }
 }

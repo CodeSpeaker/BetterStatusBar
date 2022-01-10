@@ -1,21 +1,25 @@
 package betterstatusbar.status;
 
+import betterstatusbar.status.util.GridConstraintsUtil;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.intellij.openapi.Disposable;
+import com.intellij.openapi.util.Disposer;
 import com.intellij.ui.JBColor;
+import com.intellij.ui.components.JBLabel;
 import com.intellij.ui.components.panels.OpaquePanel;
-import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import com.intellij.util.io.HttpRequests;
 import com.intellij.util.ui.JBUI;
+import com.intellij.util.xml.ui.TextPanel;
 import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
-import javax.swing.border.MatteBorder;
+import javax.swing.border.Border;
+import java.awt.*;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoField;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
@@ -25,9 +29,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
-class CalendarGridPanel extends OpaquePanel {
+class CalendarGridPanel extends OpaquePanel implements Disposable {
 
-    private final DateTimeFormatter oDateFormatter = DateTimeFormatter.ISO_INSTANT;
     private final ZoneId zoneId = ZoneId.of("Asia/Shanghai");
     private DateNumPanel[] labels = new DateNumPanel[42];
     private DateTimePanel dateTimePanel = new DateTimePanel();
@@ -35,26 +38,18 @@ class CalendarGridPanel extends OpaquePanel {
     private ExecutorService executorService = Executors.newSingleThreadExecutor();
 
     CalendarGridPanel(){
+        Disposer.register(this, dateTimePanel);
+
         ZonedDateTime now = ZonedDateTime.now(zoneId).truncatedTo(ChronoUnit.DAYS);
         Future<Map<ZonedDateTime, TempData>> dateMapFuture = getDateMapFuture(now.getYear(), now.getMonth().getValue());
         ZonedDateTime curDate = now.withDayOfMonth(1).minusWeeks(1).with(ChronoField.DAY_OF_WEEK, 7);
 
         this.setLayout(new GridLayoutManager(8, 7, JBUI.insets(1), 2, 2));
-        GridConstraints gridConstraints = new GridConstraints();
-        gridConstraints.setRow(0);
-        gridConstraints.setColumn(0);
-        gridConstraints.setColSpan(7);
-        gridConstraints.myMinimumSize.setSize(100, 100);
-        this.add(dateTimePanel, gridConstraints);
-        gridConstraints.setColSpan(1);
+        this.add(dateTimePanel, GridConstraintsUtil.getPositionGridConstraints(0, 0, 7, 100, 100));
 
-        gridConstraints.setRow(1);
-        gridConstraints.myMinimumSize.setSize(0, 50);
         for (int i = 0; i < 7; i++) {
-            DateNumPanel l = new DateNumPanel(i);
-            l.setText(weekdays[i]);
-            gridConstraints.setColumn(i % 7);
-            add(l, gridConstraints);
+            WeekPanel l = new WeekPanel(weekdays[i]);
+            add(l, GridConstraintsUtil.getPositionGridConstraints(1, i % 7, -1, 0, 50));
         }
 
         Map<ZonedDateTime, TempData> dateMap;
@@ -64,15 +59,19 @@ class CalendarGridPanel extends OpaquePanel {
             dateMap = new HashMap<>();
         }
 
-        gridConstraints.myMinimumSize.setSize(100, 100);
         for(int i = 0; i < 42; ++i) {
-            DateNumPanel l = new DateNumPanel(i);
+            TempData tempData = dateMap.getOrDefault(curDate, TempData.DEFAULT);
+            DateNumPanel l = new DateNumPanel(String.valueOf(curDate.getDayOfMonth()), tempData.lMonth, tempData.lDate);
             this.labels[i] = l;
-            l.setText(String.valueOf(curDate.getDayOfMonth()));
-            setBoder(now, curDate, dateMap, l);
-            gridConstraints.setRow(i / 7 + 2);
-            gridConstraints.setColumn(i % 7);
-            add(l, gridConstraints);
+
+            l.setBorder(getBorder(now, curDate, tempData.status));
+            if (now.equals(curDate)) {
+                l.setBackground(new JBColor(Color.orange, new Color(255, 100, 0)));
+                l.setLabelForeground(new JBColor(Color.black, Color.black));
+                dateTimePanel.setInfoText(tempData.suit, tempData.avoid);
+
+            }
+            add(l, GridConstraintsUtil.getPositionGridConstraints(i / 7 + 2, i % 7, -1, 100, 100));
             curDate = curDate.plusDays(1);
         }
 
@@ -87,34 +86,26 @@ class CalendarGridPanel extends OpaquePanel {
      * 4、非当月，周末加粗
      * 5、其他，灰色
      */
-    private void setBoder(ZonedDateTime now, ZonedDateTime curDate, Map<ZonedDateTime, TempData> dateMap, DateNumPanel l) {
-        MatteBorder border = null;
-        if (dateMap.containsKey(curDate)) {
-            TempData tempData = dateMap.get(curDate);
-            if ("1".equals(tempData.status)) {
-                border = BorderFactory.createMatteBorder(5, 5, 5, 5, JBColor.RED);
-            } else if ("2".equals(tempData.status)) {
-                border = BorderFactory.createMatteBorder(1, 1, 1, 1, JBColor.GREEN);
-            }
+    private Border getBorder(ZonedDateTime now, ZonedDateTime curDate, String status) {
+        if ("1".equals(status)) {
+            return CalBorder.REST_DAY.border;
+        } else if ("2".equals(status)) {
+            return CalBorder.WORK_WEEKEND.border;
         }
 
-        if (border == null) {
-            if (now.getMonth().equals(curDate.getMonth())) {
-                if (curDate.get(ChronoField.DAY_OF_WEEK) == 6 || curDate.get(ChronoField.DAY_OF_WEEK) == 7) {
-                    border = BorderFactory.createMatteBorder(5, 5, 5, 5, JBColor.BLUE);
-                } else {
-                    border = BorderFactory.createMatteBorder(1, 1, 1, 1, JBColor.BLUE);
-                }
+        if (now.getMonth().equals(curDate.getMonth())) {
+            if (curDate.get(ChronoField.DAY_OF_WEEK) == 6 || curDate.get(ChronoField.DAY_OF_WEEK) == 7) {
+                return CalBorder.WEEKEND_LIGHT.border;
             } else {
-                if (curDate.get(ChronoField.DAY_OF_WEEK) == 6 || curDate.get(ChronoField.DAY_OF_WEEK) == 7) {
-                    border = BorderFactory.createMatteBorder(5, 5, 5, 5, JBColor.GRAY);
-                } else {
-                    border = BorderFactory.createMatteBorder(1, 1, 1, 1, JBColor.GRAY);
-                }
+                return CalBorder.WEEKDAY_LIGHT.border;
+            }
+        } else {
+            if (curDate.get(ChronoField.DAY_OF_WEEK) == 6 || curDate.get(ChronoField.DAY_OF_WEEK) == 7) {
+                return CalBorder.WEEKEND_DARK.border;
+            } else {
+                return CalBorder.WEEKDAY_DARK.border;
             }
         }
-
-        l.setBorder(border);
     }
 
     @NotNull
@@ -140,22 +131,45 @@ class CalendarGridPanel extends OpaquePanel {
 
     }
 
-    class DateNumPanel extends JPanel {
-        private int id;
-        private JLabel label = new JLabel();
-
-        DateNumPanel(int id) {
-            this.id = id;
-            add(label);
-        }
-
-        void setText(String str) {
-            label.setText(str);
-        }
+    @Override
+    public void dispose() {
 
     }
 
+    class WeekPanel extends TextPanel {
+        private JBLabel label = new JBLabel();
+
+        WeekPanel(String text) {
+            label.setText(text);
+            add(label);
+        }
+    }
+
+    class DateNumPanel extends TextPanel {
+        private JBLabel label = new JBLabel();
+        private JBLabel lunarLabel = new JBLabel();
+
+        DateNumPanel(String monthDay, String lunarMonth, String lunarDate) {
+            label.setText(monthDay);
+            setLayout(new GridLayoutManager(2, 1, JBUI.insets(1), 2, 2));
+
+            label.setHorizontalAlignment(JBLabel.CENTER);
+            label.setVerticalTextPosition(JBLabel.TOP);
+            add(label, GridConstraintsUtil.getPositionGridConstraints(0, 0));
+
+            lunarLabel.setText(lunarMonth + " 月 " + lunarDate);
+            add(lunarLabel, GridConstraintsUtil.getPositionGridConstraints(1, 0));
+        }
+
+        public void setLabelForeground(Color fg) {
+            label.setForeground(fg);
+            lunarLabel.setForeground(fg);
+        }
+    }
+
     static class TempData {
+        public static final TempData DEFAULT = new TempData();
+        
         public java.util.List<TempData> data;
         public java.util.List<TempData> almanac;
         public String animal;
@@ -180,5 +194,21 @@ class CalendarGridPanel extends OpaquePanel {
         public String type;
         public String value;
         public String year;
+    }
+
+    enum CalBorder {
+        REST_DAY(BorderFactory.createMatteBorder(5, 5, 5, 5, JBColor.RED)),
+        WORK_WEEKEND(BorderFactory.createMatteBorder(1, 1, 1, 1, JBColor.GREEN)),
+        WEEKEND_LIGHT(BorderFactory.createMatteBorder(5, 5, 5, 5, JBColor.BLUE)),
+        WEEKDAY_LIGHT(BorderFactory.createMatteBorder(1, 1, 1, 1, JBColor.BLUE)),
+        WEEKEND_DARK(BorderFactory.createMatteBorder(5, 5, 5, 5, JBColor.GRAY)),
+        WEEKDAY_DARK(BorderFactory.createMatteBorder(1, 1, 1, 1, JBColor.GRAY)),
+        ;
+
+        private Border border;
+
+        CalBorder(Border border){
+            this.border = border;
+        }
     }
 }
