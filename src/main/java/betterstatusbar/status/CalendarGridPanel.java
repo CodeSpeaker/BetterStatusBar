@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.intellij.openapi.Disposable;
 import com.intellij.openapi.util.Disposer;
+import com.intellij.openapi.util.Pair;
 import com.intellij.ui.JBColor;
 import com.intellij.ui.components.JBLabel;
 import com.intellij.ui.components.panels.OpaquePanel;
@@ -30,6 +31,19 @@ import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
 class CalendarGridPanel extends OpaquePanel implements Disposable {
+
+    private static Map<String, Border> statusMap = new HashMap<>();
+    private static Map<Pair<Boolean, Boolean>, Border> borderRuleMap = new HashMap<>();
+
+    static {
+        statusMap.put("1", CalBorder.REST_DAY.border);
+        statusMap.put("2", CalBorder.WORK_WEEKEND.border);
+
+        borderRuleMap.put(Pair.pair(true, false), CalBorder.WEEKDAY_LIGHT.border);
+        borderRuleMap.put(Pair.pair(true, true), CalBorder.WEEKEND_LIGHT.border);
+        borderRuleMap.put(Pair.pair(false, false), CalBorder.WEEKDAY_DARK.border);
+        borderRuleMap.put(Pair.pair(false, true), CalBorder.WEEKEND_DARK.border);
+    }
 
     private final ZoneId zoneId = ZoneId.of("Asia/Shanghai");
     private DateNumPanel[] labels = new DateNumPanel[42];
@@ -87,25 +101,9 @@ class CalendarGridPanel extends OpaquePanel implements Disposable {
      * 5、其他，灰色
      */
     private Border getBorder(ZonedDateTime now, ZonedDateTime curDate, String status) {
-        if ("1".equals(status)) {
-            return CalBorder.REST_DAY.border;
-        } else if ("2".equals(status)) {
-            return CalBorder.WORK_WEEKEND.border;
-        }
-
-        if (now.getMonth().equals(curDate.getMonth())) {
-            if (curDate.get(ChronoField.DAY_OF_WEEK) == 6 || curDate.get(ChronoField.DAY_OF_WEEK) == 7) {
-                return CalBorder.WEEKEND_LIGHT.border;
-            } else {
-                return CalBorder.WEEKDAY_LIGHT.border;
-            }
-        } else {
-            if (curDate.get(ChronoField.DAY_OF_WEEK) == 6 || curDate.get(ChronoField.DAY_OF_WEEK) == 7) {
-                return CalBorder.WEEKEND_DARK.border;
-            } else {
-                return CalBorder.WEEKDAY_DARK.border;
-            }
-        }
+        boolean isCurrentMonth = now.getMonth().equals(curDate.getMonth());
+        boolean isWeekend = curDate.get(ChronoField.DAY_OF_WEEK) == 6 || curDate.get(ChronoField.DAY_OF_WEEK) == 7;
+        return statusMap.getOrDefault(status, borderRuleMap.get(Pair.create(isCurrentMonth, isWeekend)));
     }
 
     @NotNull
