@@ -1,4 +1,4 @@
-package betterstatusbar.status;
+package betterstatusbar.status.components;
 
 import betterstatusbar.status.data.BaiduCalendarData;
 import betterstatusbar.status.util.GridConstraintsUtil;

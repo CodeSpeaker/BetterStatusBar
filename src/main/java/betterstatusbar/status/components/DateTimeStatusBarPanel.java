@@ -1,4 +1,4 @@
-package betterstatusbar.status;
+package betterstatusbar.status.components;
 
 import betterstatusbar.status.util.ScheduleUtil;
 import com.intellij.openapi.wm.CustomStatusBarWidget;
@@ -14,12 +14,12 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.concurrent.TimeUnit;
 
-public class DateTimeStatausBarPanel extends TextPanel implements CustomStatusBarWidget {
+public class DateTimeStatusBarPanel extends TextPanel implements CustomStatusBarWidget {
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private boolean disposed = false;
 
-    public DateTimeStatausBarPanel(ClickListener clickListener) {
+    public DateTimeStatusBarPanel(ClickListener clickListener) {
         ScheduleUtil.schedule(this::setText, 1, TimeUnit.SECONDS);
 
         if (clickListener != null) {

@@ -1,4 +1,4 @@
-package betterstatusbar.status;
+package betterstatusbar.status.components;
 
 import com.intellij.openapi.Disposable;
 import com.intellij.openapi.ui.popup.JBPopup;
