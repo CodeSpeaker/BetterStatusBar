@@ -22,7 +22,7 @@ public class PopupCalendarGrid extends ClickListener {
         JBPopup popup = JBPopupFactory.getInstance().createComponentPopupBuilder(calendarGridPanel, null)
                 .setTitle("Calendar")
                 .createPopup();
-        Dimension dimension = new Dimension(100, 100);
+        Dimension dimension = popup.getContent().getPreferredSize();
         Point at = new Point(0, -dimension.height);
         popup.show(new RelativePoint(event.getComponent(), at));
         Disposer.register((Disposable) event.getComponent(), calendarGridPanel);
