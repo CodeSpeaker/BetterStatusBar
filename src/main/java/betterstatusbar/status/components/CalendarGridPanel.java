@@ -14,6 +14,7 @@ import com.intellij.uiDesigner.core.GridLayoutManager;
 import com.intellij.util.io.HttpRequests;
 import com.intellij.util.ui.JBUI;
 import com.intellij.util.xml.ui.TextPanel;
+import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
@@ -77,7 +78,7 @@ class CalendarGridPanel extends OpaquePanel implements Disposable {
 
         for(int i = 0; i < 42; ++i) {
             BaiduCalendarData tempData = dateMap.getOrDefault(curDate, BaiduCalendarData.DEFAULT);
-            DateNumPanel l = new DateNumPanel(String.valueOf(curDate.getDayOfMonth()), tempData.lMonth, tempData.lDate);
+            DateNumPanel l = new DateNumPanel(String.valueOf(curDate.getDayOfMonth()), tempData.lMonth, tempData.lDate, tempData.term, tempData.value);
 
             l.setBorder(getBorder(now, curDate, tempData.status));
             if (now.equals(curDate)) {
@@ -141,10 +142,11 @@ class CalendarGridPanel extends OpaquePanel implements Disposable {
     private static class DateNumPanel extends TextPanel {
         private JBLabel label = new JBLabel();
         private JBLabel lunarLabel = new JBLabel();
+        private JBLabel termLabel = new JBLabel();
 
-        private DateNumPanel(String monthDay, String lunarMonth, String lunarDate) {
+        private DateNumPanel(String monthDay, String lunarMonth, String lunarDate, String term, String value) {
             label.setText(monthDay);
-            setLayout(new GridLayoutManager(2, 1, JBUI.insets(1), 2, 2));
+            setLayout(new GridLayoutManager(3, 1, JBUI.insets(1), 2, 2));
 
             label.setHorizontalAlignment(JBLabel.CENTER);
             label.setVerticalTextPosition(JBLabel.TOP);
@@ -152,6 +154,17 @@ class CalendarGridPanel extends OpaquePanel implements Disposable {
 
             lunarLabel.setText(lunarMonth + " 月 " + lunarDate);
             add(lunarLabel, GridConstraintsUtil.getPositionGridConstraints(1, 0));
+
+            String termString = " ";
+            if (StringUtils.isNoneBlank(term, value)) {
+                termString = term + " " + value;
+            } else if (StringUtils.isNotBlank(term)) {
+                termString = term;
+            } else if (StringUtils.isNotBlank(value)) {
+                termString = value;
+            }
+            termLabel.setText(termString);
+            add(termLabel, GridConstraintsUtil.getPositionGridConstraints(2, 0));
         }
 
         private void setLabelForeground(JBColor fg) {
