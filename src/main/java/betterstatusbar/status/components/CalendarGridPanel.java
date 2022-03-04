@@ -5,10 +5,14 @@ import betterstatusbar.status.util.GridConstraintsUtil;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.intellij.openapi.Disposable;
+import com.intellij.openapi.ui.popup.JBPopup;
+import com.intellij.openapi.ui.popup.JBPopupFactory;
 import com.intellij.openapi.util.Disposer;
 import com.intellij.openapi.util.Pair;
 import com.intellij.ui.JBColor;
+import com.intellij.ui.awt.RelativePoint;
 import com.intellij.ui.components.JBLabel;
+import com.intellij.ui.components.JBPanel;
 import com.intellij.ui.components.panels.OpaquePanel;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import com.intellij.util.io.HttpRequests;
@@ -19,6 +23,9 @@ import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
 import javax.swing.border.Border;
+import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
@@ -65,8 +72,8 @@ class CalendarGridPanel extends OpaquePanel implements Disposable {
         add(dateTimePanel, GridConstraintsUtil.getPositionGridConstraints(0, 0, 7, 100, 160));
 
         for (int i = 0; i < 7; i++) {
-            WeekPanel l = new WeekPanel(WEEKDAYS[i]);
-            add(l, GridConstraintsUtil.getPositionGridConstraints(1, i % 7, -1, 0, 50));
+            JBLabel weekdayLabel = new JBLabel(WEEKDAYS[i]);
+            add(weekdayLabel, GridConstraintsUtil.getPositionGridConstraints(1, i % 7, -1, 0, 50));
         }
 
         Map<ZonedDateTime, BaiduCalendarData> dateMap;
@@ -78,15 +85,15 @@ class CalendarGridPanel extends OpaquePanel implements Disposable {
 
         for(int i = 0; i < 42; ++i) {
             BaiduCalendarData tempData = dateMap.getOrDefault(curDate, BaiduCalendarData.DEFAULT);
-            DateNumPanel l = new DateNumPanel(String.valueOf(curDate.getDayOfMonth()), tempData.lMonth, tempData.lDate, tempData.term, tempData.value);
+            DateNumPanel panel = new DateNumPanel(String.valueOf(curDate.getDayOfMonth()), tempData);
 
-            l.setBorder(getBorder(now, curDate, tempData.status));
+            panel.setBorder(getBorder(now, curDate, tempData.status));
             if (now.equals(curDate)) {
-                l.setBackground(new JBColor(0XFF6400, 0XFF6400));
-                l.setLabelForeground(new JBColor(0, 0));
+                panel.setBackground(new JBColor(0XFF6400, 0XFF6400));
+                panel.setLabelForeground(new JBColor(0, 0));
                 dateTimePanel.setInfoText(tempData.suit, tempData.avoid);
             }
-            add(l, GridConstraintsUtil.getPositionGridConstraints(i / 7 + 2, i % 7, -1, 100, 100));
+            add(panel, GridConstraintsUtil.getPositionGridConstraints(i / 7 + 2, i % 7, -1, 100, 100));
             curDate = curDate.plusDays(1);
         }
 
@@ -133,18 +140,16 @@ class CalendarGridPanel extends OpaquePanel implements Disposable {
 
     }
 
-    private static class WeekPanel extends com.intellij.openapi.wm.impl.status.TextPanel {
-        private WeekPanel(String text) {
-            setText(text);
-        }
-    }
+    public static class DateNumPanel extends TextPanel {
+        private static ShowDetailListener showDetailListener = new ShowDetailListener();
 
-    private static class DateNumPanel extends TextPanel {
+        private BaiduCalendarData data;
         private JBLabel label = new JBLabel();
         private JBLabel lunarLabel = new JBLabel();
         private JBLabel termLabel = new JBLabel();
 
-        private DateNumPanel(String monthDay, String lunarMonth, String lunarDate, String term, String value) {
+        private DateNumPanel(String monthDay, BaiduCalendarData tempData) {
+            data = tempData;
             label.setText(monthDay);
             setLayout(new GridLayoutManager(3, 1, JBUI.insets(1), 2, 2));
 
@@ -152,8 +157,52 @@ class CalendarGridPanel extends OpaquePanel implements Disposable {
             label.setVerticalTextPosition(JBLabel.TOP);
             add(label, GridConstraintsUtil.getPositionGridConstraints(0, 0));
 
-            lunarLabel.setText(lunarMonth + " 月 " + lunarDate);
+            lunarLabel.setText(data.lMonth + " 月 " + data.lDate);
             add(lunarLabel, GridConstraintsUtil.getPositionGridConstraints(1, 0));
+
+            String termString = " ";
+            if (StringUtils.isNoneBlank(data.term, data.value)) {
+                termString = data.term + " " + data.value;
+            } else if (StringUtils.isNotBlank(data.term)) {
+                termString = data.term;
+            } else if (StringUtils.isNotBlank(data.value)) {
+                termString = data.value;
+            }
+            termLabel.setText(StringUtils.abbreviate(termString, "...", 9));
+            add(termLabel, GridConstraintsUtil.getPositionGridConstraints(2, 0));
+            addMouseListener(showDetailListener);
+        }
+
+        private void setLabelForeground(JBColor fg) {
+            label.setForeground(fg);
+            lunarLabel.setForeground(fg);
+        }
+    }
+
+    private static class ShowDetailListener extends MouseAdapter {
+
+        private JBPopup popup;
+
+        @Override
+        public void mouseEntered(MouseEvent mouseEvent) {
+            DateNumPanel dateNumPanel = (DateNumPanel) mouseEvent.getComponent();
+            BaiduCalendarData data = dateNumPanel.data;
+            String avoid = data.avoid;
+            String suit = data.suit;
+            String term = data.term;
+            String value = data.value;
+
+            GridLayoutManager gridLayoutManager = new GridLayoutManager(3, 1);
+            JBPanel<?> panel = new JBPanel<>(gridLayoutManager);
+            JBLabel suitLabel = new JBLabel();
+            panel.add(suitLabel, GridConstraintsUtil.getPositionGridConstraints(0, 0));
+            JBLabel avoidLabel = new JBLabel();
+            panel.add(avoidLabel, GridConstraintsUtil.getPositionGridConstraints(1, 0));
+            JBLabel termLabel = new JBLabel();
+            panel.add(termLabel, GridConstraintsUtil.getPositionGridConstraints(2, 0));
+
+            suitLabel.setText(String.format("<html><b style='font-size:12px'>宜：</b>%s</html>", suit));
+            avoidLabel.setText(String.format("<html><b style='font-size:12px'>忌：</b>%s</html>", avoid));
 
             String termString = " ";
             if (StringUtils.isNoneBlank(term, value)) {
@@ -163,13 +212,24 @@ class CalendarGridPanel extends OpaquePanel implements Disposable {
             } else if (StringUtils.isNotBlank(value)) {
                 termString = value;
             }
-            termLabel.setText(termString);
-            add(termLabel, GridConstraintsUtil.getPositionGridConstraints(2, 0));
+            termLabel.setText(String.format("<html>%s</html>", termString));
+            popup = JBPopupFactory.getInstance().createComponentPopupBuilder(panel, null)
+                    .setTitle(data.year + "-" + data.month + "-" + data.day)
+                    .createPopup();
+            Dimension dimension = popup.getContent().getPreferredSize();
+            Point at = new Point(0, -dimension.height);
+            popup.show(new RelativePoint(mouseEvent.getComponent(), at));
+
+            suitLabel.setPreferredSize(new Dimension(panel.getWidth(), 20));
+            avoidLabel.setPreferredSize(new Dimension(panel.getWidth(), 20));
+            panel.setSize(new Dimension(panel.getWidth(), 20));
         }
 
-        private void setLabelForeground(JBColor fg) {
-            label.setForeground(fg);
-            lunarLabel.setForeground(fg);
+        @Override
+        public void mouseExited(MouseEvent mouseEvent) {
+            if (popup != null) {
+                popup.dispose();
+            }
         }
     }
 

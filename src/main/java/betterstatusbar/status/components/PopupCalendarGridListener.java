@@ -11,12 +11,14 @@ import org.jetbrains.annotations.NotNull;
 import java.awt.*;
 import java.awt.event.MouseEvent;
 
-public class PopupCalendarGrid extends ClickListener {
-    CalendarGridPanel calendarGridPanel = new CalendarGridPanel();
+public class PopupCalendarGridListener extends ClickListener {
+    CalendarGridPanel calendarGridPanel = null;
 
     @Override
     public boolean onClick(@NotNull MouseEvent event, int clickCount) {
-        Disposer.dispose(calendarGridPanel);
+        if (calendarGridPanel != null) {
+            Disposer.dispose(calendarGridPanel);
+        }
         calendarGridPanel = new CalendarGridPanel();
 
         JBPopup popup = JBPopupFactory.getInstance().createComponentPopupBuilder(calendarGridPanel, null)

@@ -1,7 +1,7 @@
 package betterstatusbar.status;
 
 import betterstatusbar.status.components.DateTimeStatusBarPanel;
-import betterstatusbar.status.components.PopupCalendarGrid;
+import betterstatusbar.status.components.PopupCalendarGridListener;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Disposer;
 import com.intellij.openapi.wm.StatusBar;
@@ -30,7 +30,7 @@ public class DateWidgetFactory implements StatusBarWidgetFactory {
     @Override
     @NotNull
     public StatusBarWidget createWidget(@NotNull Project project) {
-        return new DateTimeStatusBarPanel(new PopupCalendarGrid());
+        return new DateTimeStatusBarPanel(new PopupCalendarGridListener());
     }
 
     @Override
