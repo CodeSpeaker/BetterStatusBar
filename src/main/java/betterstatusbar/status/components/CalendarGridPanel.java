@@ -26,10 +26,7 @@ import org.jetbrains.annotations.NotNull;
 import javax.swing.*;
 import javax.swing.border.Border;
 import java.awt.*;
-import java.awt.event.InputEvent;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseWheelEvent;
+import java.awt.event.*;
 import java.awt.font.TextAttribute;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -227,7 +224,7 @@ class CalendarGridPanel extends OpaquePanel implements Disposable {
             String term = data.term;
             String value = data.value;
 
-            GridLayoutManager gridLayoutManager = new GridLayoutManager(3, 1);
+            GridLayoutManager gridLayoutManager = new GridLayoutManager(3, 1, JBUI.insets(10), 0, 0);
             JBPanel<?> panel = new JBPanel<>(gridLayoutManager);
             JBLabel suitLabel = new JBLabel();
             panel.add(suitLabel, GridConstraintsUtil.getPositionGridConstraints(0, 0));
@@ -254,10 +251,6 @@ class CalendarGridPanel extends OpaquePanel implements Disposable {
             Dimension dimension = popup.getContent().getPreferredSize();
             Point at = new Point(0, -dimension.height);
             popup.show(new RelativePoint(mouseEvent.getComponent(), at));
-
-            suitLabel.setPreferredSize(new Dimension(panel.getWidth(), 20));
-            avoidLabel.setPreferredSize(new Dimension(panel.getWidth(), 20));
-            panel.setSize(new Dimension(panel.getWidth(), 20));
         }
 
         @Override
@@ -307,44 +300,51 @@ class CalendarGridPanel extends OpaquePanel implements Disposable {
 
         private void changeText() {
             curYearMonth.setText(curMonth.format(DateTimeFormatter.ofPattern("yyyy-MM")));
-            new Thread(() -> {
-                long stamp = lock.tryWriteLock();
+            long stamp = lock.tryWriteLock();
+            try {
+                if (stamp == 0L) {
+                    return;
+                }
+                Future<Map<ZonedDateTime, BaiduCalendarData>> dateMapFuture = getDateMapFuture(curMonth.getYear(), curMonth.getMonth().getValue());
+                ZonedDateTime curDate = curMonth.withDayOfMonth(1).minusWeeks(1).with(ChronoField.DAY_OF_WEEK, 7);
+
+                Map<ZonedDateTime, BaiduCalendarData> dateMap;
                 try {
-                    if (stamp == 0L) {
-                        return;
-                    }
-                    Thread.sleep(300);
-                    Future<Map<ZonedDateTime, BaiduCalendarData>> dateMapFuture = getDateMapFuture(curMonth.getYear(), curMonth.getMonth().getValue());
-                    ZonedDateTime curDate = curMonth.withDayOfMonth(1).minusWeeks(1).with(ChronoField.DAY_OF_WEEK, 7);
+                    dateMap = dateMapFuture.get();
+                } catch (Exception e) {
+                    dateMap = new HashMap<>();
+                }
 
-                    Map<ZonedDateTime, BaiduCalendarData> dateMap;
-                    try {
-                        dateMap = dateMapFuture.get();
-                    } catch (Exception e) {
-                        dateMap = new HashMap<>();
-                    }
-
-                    for(int i = 0; i < 42; ++i) {
-                        BaiduCalendarData tempData = dateMap.getOrDefault(curDate, BaiduCalendarData.DEFAULT);
-                        DateNumPanel panel = new DateNumPanel(String.valueOf(curDate.getDayOfMonth()), tempData);
-
-                        panel.setBorder(getBorder(now, curDate, tempData.status));
-                        if (now.equals(curDate)) {
-                            panel.setBackground(new JBColor(0XFF6400, 0XFF6400));
-                            panel.setLabelForeground(new JBColor(0, 0));
+                for (Component component : getComponents()) {
+                    if (component instanceof DateNumPanel) {
+                        DateNumPanel panel = (DateNumPanel) component;
+                        for (java.awt.event.MouseListener mouseListener : panel.getMouseListeners()) {
+                            if (mouseListener instanceof ShowDetailListener) {
+                                ShowDetailListener listener = (ShowDetailListener) mouseListener;
+                                listener.popup.dispose();
+                            }
                         }
-                        add(panel, GridConstraintsUtil.getPositionGridConstraints(i / 7 + 3, i % 7, -1, 100, 100));
-                        curDate = curDate.plusDays(1);
-                    }
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                } finally {
-                    if (stamp != 0) {
-                        lock.unlockWrite(stamp);
+                        remove(panel);
                     }
                 }
-            }).start();
 
+                for(int i = 0; i < 42; ++i) {
+                    BaiduCalendarData tempData = dateMap.getOrDefault(curDate, BaiduCalendarData.DEFAULT);
+                    DateNumPanel panel = new DateNumPanel(String.valueOf(curDate.getDayOfMonth()), tempData);
+
+                    panel.setBorder(getBorder(curMonth, curDate, tempData.status));
+                    if (now.equals(curDate)) {
+                        panel.setBackground(new JBColor(0XFF6400, 0XFF6400));
+                        panel.setLabelForeground(new JBColor(0, 0));
+                    }
+                    add(panel, GridConstraintsUtil.getPositionGridConstraints(i / 7 + 3, i % 7, -1, 100, 100));
+                    curDate = curDate.plusDays(1);
+                }
+            } finally {
+                if (stamp != 0) {
+                    lock.unlockWrite(stamp);
+                }
+            }
         }
 
         @Override
