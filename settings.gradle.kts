@@ -1,1 +1,1 @@
-rootProject.name = "BetterStatusBar"
+rootProject.name = "ChineseAlmanac"

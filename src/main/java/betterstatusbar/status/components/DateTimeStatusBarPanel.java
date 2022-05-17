@@ -1,5 +1,6 @@
 package betterstatusbar.status.components;
 
+import betterstatusbar.status.util.DateTimeUtil;
 import betterstatusbar.status.util.ScheduleUtil;
 import com.intellij.openapi.wm.CustomStatusBarWidget;
 import com.intellij.openapi.wm.StatusBar;
@@ -9,13 +10,9 @@ import com.intellij.ui.ClickListener;
 import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
-import java.awt.*;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.concurrent.TimeUnit;
 
 public class DateTimeStatusBarPanel extends TextPanel implements CustomStatusBarWidget {
-    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private boolean disposed = false;
 
@@ -53,7 +50,7 @@ public class DateTimeStatusBarPanel extends TextPanel implements CustomStatusBar
 
     private void setText() {
         if (!disposed) {
-            String text = LocalDateTime.now().format(FORMATTER);
+            String text = DateTimeUtil.getNowDateTimeString();
             setText(text);
 
             long currentTimeMillis = System.currentTimeMillis();
@@ -61,8 +58,4 @@ public class DateTimeStatusBarPanel extends TextPanel implements CustomStatusBar
         }
     }
 
-    @Override
-    public Dimension getMinimumSize() {
-        return super.getMinimumSize();
-    }
 }
