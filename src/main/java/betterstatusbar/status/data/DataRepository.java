@@ -65,9 +65,10 @@ public class DataRepository {
         }
 
         try {
-            ByteBuffer compressedDst = ByteBuffer.allocate(500000);
+            ByteBuffer compressedDst;
             ByteBuffer dst = ByteBuffer.allocate(3000000);
             try (FileChannel fileChannel = FileChannel.open(path, StandardOpenOption.READ)) {
+                compressedDst = ByteBuffer.allocate((int) fileChannel.size());
                 fileChannel.read(compressedDst);
             }
 
@@ -79,9 +80,9 @@ public class DataRepository {
 
             dst.flip();
             count = dst.getInt();
-            byte[] dateBytes = new byte[8];
-            dst.get(dateBytes);
-            baseDate = LocalDate.parse(new String(dateBytes, StandardCharsets.UTF_8), DateTimeFormatter.ofPattern("yyyyMMdd"));
+            ByteBuffer dateBuffer = ByteBuffer.allocate(8);
+            dst.get(dateBuffer.array());
+            baseDate = LocalDate.parse(StandardCharsets.UTF_8.newDecoder().decode(dateBuffer).toString(), DateTimeFormatter.ofPattern("yyyyMMdd"));
             for (int i = 0; i < count; i++) {
                 data0.add(dst.getInt());
             }
