@@ -1,6 +1,5 @@
 package betterstatusbar.status;
 
-import betterstatusbar.status.components.ComponentManager;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Disposer;
 import com.intellij.openapi.wm.StatusBar;

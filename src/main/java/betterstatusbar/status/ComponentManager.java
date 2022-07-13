@@ -1,15 +1,17 @@
-package betterstatusbar.status.components;
+package betterstatusbar.status;
 
+import betterstatusbar.status.components.CalendarGridPanel;
+import betterstatusbar.status.components.DateTimePanel;
+import betterstatusbar.status.components.DateTimeStatusBarPanel;
+import betterstatusbar.status.data.DataRepository;
 import betterstatusbar.status.listener.ChangeMonthMouseListener;
 import betterstatusbar.status.listener.PopupCalendarGridListener;
-import betterstatusbar.status.util.GridConstraintsUtil;
 import com.intellij.icons.AllIcons;
 import com.intellij.ui.components.JBLabel;
 import org.apache.groovy.util.Maps;
 
 import java.awt.*;
 import java.awt.font.TextAttribute;
-import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Supplier;
@@ -23,6 +25,7 @@ public class ComponentManager {
 
     private static void init() {
         COMPONENT_MAP.put("dateTimeStatusBarPanel", new DateTimeStatusBarPanel(new PopupCalendarGridListener()));
+
         COMPONENT_MAP.put("calendarGridPanel", (Supplier<CalendarGridPanel>) () -> {
             DateTimePanel dateTimePanel = new DateTimePanel();
             COMPONENT_MAP.put("dateTimePanel", dateTimePanel);
@@ -50,14 +53,19 @@ public class ComponentManager {
 
             calendarGridPanel.addMouseWheelListener(new ChangeMonthMouseListener(calendarGridPanel));
             calendarGridPanel.changeText();
+
+            // 将Supplier替换为具体对象，不必每次都new
+            COMPONENT_MAP.put("calendarGridPanel", calendarGridPanel);
             return calendarGridPanel;
         });
+
+        COMPONENT_MAP.put("dataRepository", new DataRepository("data"));
     }
 
     @SuppressWarnings("unchecked")
     public static <T> T getComponent(String componentName) {
         if (COMPONENT_MAP.get(componentName) instanceof Supplier) {
-            // 用Supplier可以使每次getComponent都重新new一个新对象
+            // 用Supplier可以实现懒加载，并使每次getComponent都重新new一个新对象
             return ((Supplier<T>) COMPONENT_MAP.get(componentName)).get();
         }
         return (T) COMPONENT_MAP.get(componentName);

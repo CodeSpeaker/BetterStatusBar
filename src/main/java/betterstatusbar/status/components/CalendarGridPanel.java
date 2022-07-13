@@ -1,5 +1,6 @@
 package betterstatusbar.status.components;
 
+import betterstatusbar.status.ComponentManager;
 import betterstatusbar.status.data.CalendarData;
 import betterstatusbar.status.data.DataRepository;
 import betterstatusbar.status.enums.WeekDays;
@@ -26,26 +27,21 @@ import java.util.concurrent.locks.StampedLock;
 
 public class CalendarGridPanel extends OpaquePanel implements Disposable {
 
-    private static final DataRepository dataRepository;
-
     private static final JsonMapper JSON_MAPPER = new JsonMapper();
-    private LocalDate curDate;
     private final StampedLock lock = new StampedLock();
+    private final DataRepository dataRepository = ComponentManager.getComponent("dataRepository");
+    private LocalDate curDate = DateTimeUtil.today();
 
     static {
         JSON_MAPPER.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-        dataRepository = new DataRepository("data");
     }
 
-    CalendarGridPanel(){
-        curDate = DateTimeUtil.today();
+    public CalendarGridPanel(){
         setLayout(new GridLayoutManager(9, 7, JBUI.insets(1), 2, 2));
 
         DateTimePanel dateTimePanel = ComponentManager.getComponent("dateTimePanel");
         Disposer.register(this, dateTimePanel);
         add(dateTimePanel, GridConstraintsUtil.getPositionGridConstraints(0, 0, 7, 100, 160));
-        CalendarData tempData = dataRepository.getData(curDate);
-        dateTimePanel.setInfoText(tempData.getSuit(), tempData.getAvoid());
 
         add(ComponentManager.getComponent("preYear"), GridConstraintsUtil.getPositionGridConstraints(1, 1));
         add(ComponentManager.getComponent("preMonth"), GridConstraintsUtil.getPositionGridConstraints(1, 2));
@@ -68,10 +64,20 @@ public class CalendarGridPanel extends OpaquePanel implements Disposable {
 
     public void plusYears(int year) {
         curDate = curDate.plusYears(year);
+        if (curDate.compareTo(DateTimeUtil.MAX_DATE) > 0) {
+            curDate = DateTimeUtil.MAX_DATE;
+        } else if (curDate.compareTo(DateTimeUtil.MIN_DATE) < 0) {
+            curDate = DateTimeUtil.MIN_DATE;
+        }
     }
 
     public void plusMonths(int month) {
         curDate = curDate.plusMonths(month);
+        if (curDate.compareTo(DateTimeUtil.MAX_DATE) > 0) {
+            curDate = DateTimeUtil.MAX_DATE;
+        } else if (curDate.compareTo(DateTimeUtil.MIN_DATE) < 0) {
+            curDate = DateTimeUtil.MIN_DATE;
+        }
     }
 
     public void changeText() {
@@ -101,7 +107,7 @@ public class CalendarGridPanel extends OpaquePanel implements Disposable {
                 DateNumPanel panel = new DateNumPanel(String.valueOf(iDate.getDayOfMonth()), tempData);
 
                 panel.setBorder(BorderUtil.getBorder(curDate, iDate, tempData.getStatus()));
-                if (curDate.equals(iDate)) {
+                if (DateTimeUtil.today().equals(iDate)) {
                     panel.setBackground(new JBColor(0XFF6400, 0XFF6400));
                     panel.setLabelForeground(new JBColor(0, 0));
                 }

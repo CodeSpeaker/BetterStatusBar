@@ -1,5 +1,9 @@
 package betterstatusbar.status.components;
 
+import betterstatusbar.status.ComponentManager;
+import betterstatusbar.status.data.CalendarData;
+import betterstatusbar.status.data.DataRepository;
+import betterstatusbar.status.util.DateTimeUtil;
 import betterstatusbar.status.util.GridConstraintsUtil;
 import betterstatusbar.status.util.ScheduleUtil;
 import com.intellij.openapi.Disposable;
@@ -12,12 +16,15 @@ import org.apache.groovy.util.Maps;
 
 import java.awt.*;
 import java.awt.font.TextAttribute;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.concurrent.TimeUnit;
 
 public class DateTimePanel extends TextPanel implements Disposable {
-    private final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+    private final DataRepository dataRepository = ComponentManager.getComponent("dataRepository");
+    private LocalDate curDate;
 
     private JBLabel dateTimeLabel;
     private JBLabel milliSecondLabel;
@@ -59,10 +66,16 @@ public class DateTimePanel extends TextPanel implements Disposable {
 
     private void setDateTimeText() {
         if (!disposed) {
-            String text = LocalDateTime.now().format(FORMATTER);
-            dateTimeLabel.setText(text);
+            LocalDateTime now = DateTimeUtil.now();
+            dateTimeLabel.setText(DateTimeUtil.getDateTimeString(now));
             long currentTimeMillis = System.currentTimeMillis();
             ScheduleUtil.schedule(this::setDateTimeText, 1000 - currentTimeMillis % 1000, TimeUnit.MILLISECONDS);
+
+            if (!now.toLocalDate().equals(curDate)) {
+                curDate = now.toLocalDate();
+                CalendarData data = dataRepository.getData(curDate);
+                setInfoText(data.getSuit(), data.getAvoid());
+            }
         }
     }
 

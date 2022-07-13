@@ -1,7 +1,7 @@
 package betterstatusbar.status.listener;
 
 import betterstatusbar.status.components.CalendarGridPanel;
-import betterstatusbar.status.components.ComponentManager;
+import betterstatusbar.status.ComponentManager;
 import com.intellij.openapi.Disposable;
 import com.intellij.openapi.ui.popup.JBPopup;
 import com.intellij.openapi.ui.popup.JBPopupFactory;
